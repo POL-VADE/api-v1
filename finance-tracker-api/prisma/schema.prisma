@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  Income
+  Expense
+}
+
+enum SourceType {
+  Bank
+  Custom
+}
+
+model User {
+  id          String        @id @default(uuid())
+  phoneNumber String        @unique
+  password    String
+  name        String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  categories  Category[]
+  sources     Source[]
+  transactions Transaction[]
+  budgets     Budget[]
+
+  @@map("zt_user")
+}
+
+model Category {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  title          String
+  type           TransactionType
+  defaultCategory Boolean      @default(false) @map("default_category")
+  iconRes        String?       @map("icon_res")
+  iconColor      String?       @map("icon_color")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  budgets        Budget[]
+
+  @@index([userId])
+  @@index([type])
+  @@map("zt_category")
+}
+
+model Source {
+  id                    String        @id @default(uuid())
+  userId               String        @map("user_id")
+  type                 SourceType
+  initialBalance       Decimal       @map("initial_balance")
+  bankSourceTitle      String?       @map("bank_source_title")
+  bankSourceBankName   String?       @map("bank_source_bank_name")
+  bankSourceCardNumber String?       @map("bank_source_card_number")
+  bankSourceSmsSuggestion Boolean    @default(false) @map("bank_source_sms_suggestion")
+  customSourceTitle    String?       @map("custom_source_title")
+  iconRes              String?       @map("icon_res")
+  iconColor            String?       @map("icon_color")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions         Transaction[]
+
+  @@index([userId])
+  @@index([type])
+  @@map("zt_source")
+}
+
+model Transaction {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  categoryId  String      @map("category_id")
+  sourceId    String      @map("source_id")
+  amount      Decimal
+  description String?
+  date        DateTime
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  source      Source      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([sourceId])
+  @@index([date])
+  @@map("zt_transaction")
+}
+
+model Budget {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  categoryId  String    @map("category_id")
+  amount      Decimal
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime  @map("end_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([startDate, endDate])
+  @@map("zt_budget")
+}
+
+enum CategoryType {
+  Income
+  Expense
+}

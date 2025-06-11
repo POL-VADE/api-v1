@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# Build output
+dist
+build
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE files
+.idea
+.vscode
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage
+.nyc_output
+
+# Docker files
+.docker
+docker-compose.override.yml
+
+# Misc
+*.log
+*.tmp
+*.temp
+.cache
+.temp
+.tmp
+
+# Prisma
+prisma/migrations
+prisma/*.db
+
+# Config files
+.eslintrc.js
+.prettierrc
+.editorconfig
+jest.config.js
+jest-e2e.config.js 
