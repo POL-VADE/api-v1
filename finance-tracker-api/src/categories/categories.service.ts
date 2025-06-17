@@ -13,7 +13,7 @@ export class CategoriesService {
       data: {
         userId,
         title: createCategoryDto.title,
-        type: createCategoryDto.type,
+        type: createCategoryDto.type as TransactionType,
         defaultCategory: createCategoryDto.defaultCategory || false,
         iconRes: createCategoryDto.iconRes,
         iconColor: createCategoryDto.iconColor,
@@ -54,7 +54,7 @@ export class CategoriesService {
       where: { id },
       data: {
         title: updateCategoryDto.title,
-        type: updateCategoryDto.type,
+        type: updateCategoryDto.type as TransactionType,
         defaultCategory: updateCategoryDto.defaultCategory,
         iconRes: updateCategoryDto.iconRes,
         iconColor: updateCategoryDto.iconColor,

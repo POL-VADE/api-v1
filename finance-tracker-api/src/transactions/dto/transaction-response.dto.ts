@@ -1,4 +1,4 @@
-import { TransactionType } from '../entities/transaction.entity';
+import { TransactionType } from "@prisma/client";
 
 export class TransactionResponseDto {
   id: string;

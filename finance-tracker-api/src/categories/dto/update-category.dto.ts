@@ -1,8 +1,9 @@
 import { IsString, IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { TransactionType } from '@prisma/client';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { CreateCategoryDto } from './create-category.dto';
 
-export class UpdateCategoryDto {
+export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {
   @ApiProperty({
     description: 'Category title',
     example: 'Groceries',
