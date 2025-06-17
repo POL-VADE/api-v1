@@ -2,7 +2,6 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import * as argon2 from '@node-rs/argon2';
 
 @Injectable()
 export class UsersService {
@@ -17,12 +16,9 @@ export class UsersService {
       throw new ConflictException('Phone number already registered');
     }
 
-    const hashedPassword = await argon2.hash(createUserDto.password);
-
     return this.prisma.user.create({
       data: {
         phoneNumber: createUserDto.phoneNumber,
-        password: hashedPassword,
         name: createUserDto.name,
       },
       select: {
@@ -81,17 +77,11 @@ export class UsersService {
   async update(id: string, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
 
-    const data: any = {
-      name: updateUserDto.name,
-    };
-
-    if (updateUserDto.password) {
-      data.password = await argon2.hash(updateUserDto.password);
-    }
-
     return this.prisma.user.update({
       where: { id },
-      data,
+      data: {
+        name: updateUserDto.name,
+      },
       select: {
         id: true,
         phoneNumber: true,
