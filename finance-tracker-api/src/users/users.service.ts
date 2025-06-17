@@ -2,7 +2,7 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from '@node-rs/argon2';
 
 @Injectable()
 export class UsersService {
@@ -17,7 +17,7 @@ export class UsersService {
       throw new ConflictException('Phone number already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const hashedPassword = await argon2.hash(createUserDto.password);
 
     return this.prisma.user.create({
       data: {
@@ -86,7 +86,7 @@ export class UsersService {
     };
 
     if (updateUserDto.password) {
-      data.password = await bcrypt.hash(updateUserDto.password, 10);
+      data.password = await argon2.hash(updateUserDto.password);
     }
 
     return this.prisma.user.update({

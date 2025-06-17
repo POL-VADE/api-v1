@@ -1,8 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { LoginUserDto } from '../users/dto/login-user.dto';
-import * as bcrypt from 'bcrypt';
+import { LoginUserDto } from '@/users/dto/login-user.dto';
+import * as argon2 from '@node-rs/argon2';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +14,7 @@ export class AuthService {
   async validateUser(loginUserDto: LoginUserDto) {
     try {
       const user = await this.usersService.findByPhoneNumber(loginUserDto.phoneNumber);
-      const isPasswordValid = await bcrypt.compare(loginUserDto.password, user.password);
+      const isPasswordValid = await argon2.verify(user.password, loginUserDto.password);
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid credentials');
       }
