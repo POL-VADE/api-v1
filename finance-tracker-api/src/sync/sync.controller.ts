@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SyncService } from './sync.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -53,7 +62,18 @@ export class SyncController {
     @Request() req: RequestWithUser,
     @Query('lastSync') lastSync: string,
   ): Promise<SyncChangesDto> {
-    return this.syncService.getChanges(req.user.id, new Date(lastSync));
+    if (!lastSync) {
+      throw new BadRequestException('lastSync parameter is required');
+    }
+
+    const lastSyncDate = new Date(lastSync);
+    if (isNaN(lastSyncDate.getTime())) {
+      throw new BadRequestException(
+        'Invalid lastSync date format. Please provide a valid ISO date string',
+      );
+    }
+
+    return this.syncService.getChanges(req.user.id, lastSyncDate);
   }
 
   @Post('sync')
