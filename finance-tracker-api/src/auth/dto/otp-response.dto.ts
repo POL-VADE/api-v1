@@ -8,8 +8,9 @@ export class OtpResponseDto {
   message: string;
 
   @ApiProperty({
-    description: 'The OTP code for testing purposes',
+    description: 'The OTP code (only returned in development environment for testing purposes)',
     example: '123456',
+    required: false,
   })
-  otp: string;
+  otp?: string;
 }

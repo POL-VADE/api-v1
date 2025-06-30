@@ -1,5 +1,6 @@
 import { Controller, Post, Body, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UsersService } from '../users/users.service';
@@ -18,6 +19,8 @@ export class AuthController {
   ) {}
 
   @Post('request-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @ApiOperation({
     summary: 'Request OTP',
     description:
@@ -28,11 +31,14 @@ export class AuthController {
     description: 'OTP sent successfully',
     type: OtpResponseDto,
   })
+  @ApiResponse({ status: 429, description: 'Too Many Requests' })
   async requestOtp(@Body() phoneNumberDto: PhoneNumberRequestDto) {
     return this.authService.requestOTP(phoneNumberDto.phoneNumber);
   }
 
   @Post('register')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 attempts per 5 minutes
   @ApiOperation({ summary: 'Register a new user with OTP verification' })
   @ApiResponse({
     status: 201,
@@ -41,6 +47,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @ApiResponse({ status: 409, description: 'Phone number already registered' })
+  @ApiResponse({ status: 429, description: 'Too Many Requests' })
   async register(@Body() registerWithOtpDto: RegisterWithOtpDto) {
     await this.authService.verifyOTP(
       registerWithOtpDto.phoneNumber,
@@ -58,6 +65,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 attempts per 5 minutes
   @ApiOperation({ summary: 'Login with OTP verification' })
   @ApiResponse({
     status: 200,
@@ -65,6 +74,7 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
+  @ApiResponse({ status: 429, description: 'Too Many Requests' })
   async login(@Body() verifyOtpDto: VerifyOtpDto) {
     await this.authService.verifyOTP(verifyOtpDto.phoneNumber, verifyOtpDto.otp, 'login');
     const user = await this.usersService.findByPhoneNumberSafe(verifyOtpDto.phoneNumber);

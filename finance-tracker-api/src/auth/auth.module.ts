@@ -15,7 +15,11 @@ import { UsersModule } from '../users/users.module';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '24h' },
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRATION') || '24h',
+          issuer: 'finance-tracker-api',
+          audience: 'finance-tracker-app',
+        },
       }),
       inject: [ConfigService],
     }),
