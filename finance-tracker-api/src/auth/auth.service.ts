@@ -42,7 +42,7 @@ export class AuthService {
     // TODO: Integrate with SMS service to send OTP
     console.log(`Registration OTP for ${phoneNumber}: ${otp}`); // For development only
 
-    return { message: 'OTP sent successfully' };
+    return { message: 'OTP sent successfully', otp };
   }
 
   async requestLoginOTP(phoneNumber: string) {
@@ -57,7 +57,7 @@ export class AuthService {
     // TODO: Integrate with SMS service to send OTP
     console.log(`Login OTP for ${phoneNumber}: ${otp}`); // For development only
 
-    return { message: 'OTP sent successfully' };
+    return { message: 'OTP sent successfully', otp };
   }
 
   async verifyOTP(phoneNumber: string, otp: string, type: 'login' | 'register') {
