@@ -24,40 +24,31 @@ export class AuthService {
     this.otpStore.set(phoneNumber, { otp, expiresAt, type });
   }
 
-  async requestRegistrationOTP(phoneNumber: string) {
+  async requestOTP(phoneNumber: string) {
+    // Always return success to prevent user enumeration attacks
+    // Send OTP based on user existence and store appropriate type
     try {
-      const existingUser = await this.usersService.findByPhoneNumber(phoneNumber);
+      const existingUser = await this.usersService.findByPhoneNumberSafe(phoneNumber);
+      const otp = this.generateOTP();
+
       if (existingUser) {
-        throw new ConflictException('Phone number already registered');
+        // User exists - this will be for login
+        this.storeOTP(phoneNumber, otp, 'login');
+        console.log(`Login OTP for ${phoneNumber}: ${otp}`); // For development only
+      } else {
+        // User doesn't exist - this will be for registration
+        this.storeOTP(phoneNumber, otp, 'register');
+        console.log(`Registration OTP for ${phoneNumber}: ${otp}`); // For development only
       }
+
+      // TODO: Integrate with SMS service to send OTP
+      return { message: 'OTP sent successfully', otp };
     } catch (error) {
-      if (error instanceof ConflictException) {
-        throw error;
-      }
+      // Handle database errors gracefully
+      // Still return success for security
+      console.log('Database error in requestOTP:', error);
+      return { message: 'OTP sent successfully', otp: '------' };
     }
-
-    const otp = this.generateOTP();
-    this.storeOTP(phoneNumber, otp, 'register');
-
-    // TODO: Integrate with SMS service to send OTP
-    console.log(`Registration OTP for ${phoneNumber}: ${otp}`); // For development only
-
-    return { message: 'OTP sent successfully', otp };
-  }
-
-  async requestLoginOTP(phoneNumber: string) {
-    const user = await this.usersService.findByPhoneNumber(phoneNumber);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    const otp = this.generateOTP();
-    this.storeOTP(phoneNumber, otp, 'login');
-
-    // TODO: Integrate with SMS service to send OTP
-    console.log(`Login OTP for ${phoneNumber}: ${otp}`); // For development only
-
-    return { message: 'OTP sent successfully', otp };
   }
 
   async verifyOTP(phoneNumber: string, otp: string, type: 'login' | 'register') {
@@ -78,6 +69,27 @@ export class AuthService {
 
     if (storedData.type !== type) {
       throw new UnauthorizedException('Invalid OTP type');
+    }
+
+    // Additional validation during verification phase
+    try {
+      const existingUser = await this.usersService.findByPhoneNumberSafe(phoneNumber);
+
+      if (type === 'register' && existingUser) {
+        this.otpStore.delete(phoneNumber);
+        throw new ConflictException('Phone number already registered');
+      }
+
+      if (type === 'login' && !existingUser) {
+        this.otpStore.delete(phoneNumber);
+        throw new UnauthorizedException('User not found');
+      }
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      // Log database errors but don't throw them during verification
+      console.log('Database error in verifyOTP:', error);
     }
 
     this.otpStore.delete(phoneNumber);

@@ -1,9 +1,13 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UsersService } from '../users/users.service';
 import { VerifyOtpDto } from '../users/dto/verify-otp.dto';
+import { RegisterWithOtpDto } from '../users/dto/register-with-otp.dto';
+import { OtpResponseDto } from './dto/otp-response.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { PhoneNumberRequestDto } from './dto/phone-number-request.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -13,20 +17,19 @@ export class AuthController {
     private readonly usersService: UsersService,
   ) {}
 
-  @Post('request-registration-otp')
-  @ApiOperation({ summary: 'Request OTP for registration' })
+  @Post('request-otp')
+  @ApiOperation({
+    summary: 'Request OTP',
+    description:
+      'Unified endpoint for both registration and login OTP requests. Always returns success to prevent user enumeration attacks. Automatically determines whether to send registration or login OTP based on user existence.',
+  })
   @ApiResponse({
     status: 200,
     description: 'OTP sent successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string' },
-      },
-    },
+    type: OtpResponseDto,
   })
-  async requestRegistrationOtp(@Body('phoneNumber') phoneNumber: string) {
-    return this.authService.requestRegistrationOTP(phoneNumber);
+  async requestOtp(@Body() phoneNumberDto: PhoneNumberRequestDto) {
+    return this.authService.requestOTP(phoneNumberDto.phoneNumber);
   }
 
   @Post('register')
@@ -34,65 +37,42 @@ export class AuthController {
   @ApiResponse({
     status: 201,
     description: 'User successfully registered',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        phoneNumber: { type: 'string' },
-        name: { type: 'string' },
-        createdAt: { type: 'string', format: 'date-time' },
-        updatedAt: { type: 'string', format: 'date-time' },
-      },
-    },
+    type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @ApiResponse({ status: 409, description: 'Phone number already registered' })
-  async register(@Body() verifyOtpDto: VerifyOtpDto, @Body() createUserDto: CreateUserDto) {
-    await this.authService.verifyOTP(verifyOtpDto.phoneNumber, verifyOtpDto.otp, 'register');
+  async register(@Body() registerWithOtpDto: RegisterWithOtpDto) {
+    await this.authService.verifyOTP(
+      registerWithOtpDto.phoneNumber,
+      registerWithOtpDto.otp,
+      'register',
+    );
+
+    const createUserDto: CreateUserDto = {
+      phoneNumber: registerWithOtpDto.phoneNumber,
+      name: registerWithOtpDto.name,
+    };
+
     const user = await this.authService.register(createUserDto);
     return this.authService.login(user);
   }
 
-  @Post('request-login-otp')
-  @ApiOperation({ summary: 'Request OTP for login' })
+  @Post('login')
+  @ApiOperation({ summary: 'Login with OTP verification' })
   @ApiResponse({
     status: 200,
-    description: 'OTP sent successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string' },
-      },
-    },
-  })
-  async requestLoginOtp(@Body('phoneNumber') phoneNumber: string) {
-    return this.authService.requestLoginOTP(phoneNumber);
-  }
-
-  @Post('verify-login-otp')
-  @ApiOperation({ summary: 'Verify OTP for login' })
-  @ApiResponse({
-    status: 200,
-    description: 'OTP verified successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        access_token: { type: 'string' },
-        user: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            phoneNumber: { type: 'string' },
-            name: { type: 'string' },
-          },
-        },
-      },
-    },
+    description: 'Login successful',
+    type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
-  async verifyLoginOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+  async login(@Body() verifyOtpDto: VerifyOtpDto) {
     await this.authService.verifyOTP(verifyOtpDto.phoneNumber, verifyOtpDto.otp, 'login');
-    const user = await this.usersService.findByPhoneNumber(verifyOtpDto.phoneNumber);
+    const user = await this.usersService.findByPhoneNumberSafe(verifyOtpDto.phoneNumber);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
     return this.authService.login(user);
   }
 }

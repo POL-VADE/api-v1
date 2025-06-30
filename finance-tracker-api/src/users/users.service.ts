@@ -74,6 +74,16 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Safe version of findByPhoneNumber that returns null instead of throwing exception
+   * Used for auth flows where user existence should not throw errors
+   */
+  async findByPhoneNumberSafe(phoneNumber: string) {
+    return this.prisma.user.findUnique({
+      where: { phoneNumber },
+    });
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
 
